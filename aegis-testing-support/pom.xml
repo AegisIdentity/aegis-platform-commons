@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.aegis</groupId>
+        <artifactId>aegis-platform-parent</artifactId>
+        <version>0.1.0</version>
+        <relativePath>../../aegis-platform-bom/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aegis-testing-support</artifactId>
+    <version>0.1.0</version>
+    <name>Aegis Testing Support</name>
+    <description>Shared Testcontainers configuration (@ServiceConnection Postgres/Redis) and security
+        test helpers, so every service's integration tests hit real backends the same way.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+        </dependency>
+        <!-- Provides org.springframework.security.oauth2.jwt.Jwt used by the jwt() MockMvc mutator
+             (it lives in oauth2-jose, which resource-server only pulls as an optional dependency). -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
+        <!-- Testcontainers 2.x (managed at 2.0.5 by the Spring Boot BOM) renamed modules with a
+             'testcontainers-' prefix. The classic org.testcontainers.containers.* API is retained. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+        </dependency>
+    </dependencies>
+</project>

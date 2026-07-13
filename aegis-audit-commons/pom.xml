@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.aegis</groupId>
+        <artifactId>aegis-platform-parent</artifactId>
+        <version>0.1.0</version>
+        <relativePath>../../aegis-platform-bom/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aegis-audit-commons</artifactId>
+    <version>0.1.0</version>
+    <name>Aegis Audit Commons</name>
+    <description>Audit event model, publisher SPI, and a structured-logging publisher. The forensic
+        trail (Okta System Log analogue). Kafka/SIEM adapters are wired per service.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.aegis</groupId>
+            <artifactId>aegis-tenant-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

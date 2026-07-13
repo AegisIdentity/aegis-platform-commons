@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.aegis</groupId>
+        <artifactId>aegis-platform-parent</artifactId>
+        <version>0.1.0</version>
+        <relativePath>../../aegis-platform-bom/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aegis-security-commons</artifactId>
+    <version>0.1.0</version>
+    <name>Aegis Security Commons</name>
+    <description>Reusable Spring Security hardening: security headers/CSP, stateless-bearer-API
+        defaults, explicit CORS, 401/403 semantics, and an auth-event to audit-log bridge.
+        Applied uniformly by every servlet service so hardening is not re-derived per service.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.aegis</groupId>
+            <artifactId>aegis-audit-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
