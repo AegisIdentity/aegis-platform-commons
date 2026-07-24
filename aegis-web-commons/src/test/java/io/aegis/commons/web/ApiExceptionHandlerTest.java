@@ -18,10 +18,13 @@ class ApiExceptionHandlerTest {
     }
 
     @Test
-    void illegal_argument_maps_to_400_with_its_message() {
-        ProblemDetail pd = handler.handleIllegalArgument(new IllegalArgumentException("bad tenant"));
+    void illegal_argument_maps_to_400_with_generic_message_not_leaking_input() {
+        ProblemDetail pd = handler.handleIllegalArgument(
+                new IllegalArgumentException("bad tenant 'user-supplied-echo'"));
         assertThat(pd.getStatus()).isEqualTo(HttpStatus.BAD_REQUEST.value());
-        assertThat(pd.getDetail()).isEqualTo("bad tenant");
+        // The raw message (which may echo attacker input or internals) must not reach the client.
+        assertThat(pd.getDetail()).isEqualTo("Invalid request.");
+        assertThat(pd.getDetail()).doesNotContain("user-supplied-echo");
     }
 
     @Test

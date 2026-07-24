@@ -29,7 +29,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException ex) {
-        return problem(HttpStatus.BAD_REQUEST, safe(ex.getMessage(), "Invalid request."));
+        // The raw message can echo attacker-supplied input or internal detail — log it (with the
+        // correlation id) but return a generic message to the client (mirrors handleUnexpected).
+        log.warn("Invalid request [correlationId={}]: {}",
+                MDC.get(CorrelationIdFilter.MDC_KEY), ex.getMessage());
+        return problem(HttpStatus.BAD_REQUEST, "Invalid request.");
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

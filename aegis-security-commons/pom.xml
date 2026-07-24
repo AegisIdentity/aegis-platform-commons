@@ -28,6 +28,24 @@
             <artifactId>aegis-audit-commons</artifactId>
         </dependency>
         <dependency>
+            <groupId>io.aegis</groupId>
+            <artifactId>aegis-tenant-context</artifactId>
+        </dependency>
+
+        <!-- Resource-server / JOSE support for AegisJwtDecoderFactory. Optional so this library keeps
+             its lightweight footprint: services that use the factory already pull in the resource
+             server; services that only use the header/CORS helpers are unaffected. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-resource-server</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
             <scope>provided</scope>

@@ -3,6 +3,10 @@ package io.aegis.commons.security;
 import io.aegis.commons.audit.AuditEvent;
 import io.aegis.commons.audit.AuditEventPublisher;
 import io.aegis.commons.audit.AuditOutcome;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.authentication.event.AbstractAuthenticationFailureEvent;
 import org.springframework.security.authentication.event.AuthenticationSuccessEvent;
@@ -33,8 +37,12 @@ public class AuthenticationAuditListener {
 
     @EventListener
     public void onFailure(AbstractAuthenticationFailureEvent event) {
+        // On failure the "principal" is the *attempted* username — and users routinely mistype their
+        // password into the username field. Hashing it keeps a cleartext credential out of the audit
+        // trail while a deterministic (unsalted) digest still lets repeated failures be correlated.
         audit.publish(AuditEvent.of("auth", "login", AuditOutcome.FAILURE)
-                .actor(name(event.getAuthentication() == null ? null : event.getAuthentication().getName()))
+                .actor(hashedActor(event.getAuthentication() == null
+                        ? null : event.getAuthentication().getName()))
                 .attribute("reason", event.getException() == null
                         ? "unknown" : event.getException().getClass().getSimpleName())
                 .build());
@@ -51,5 +59,23 @@ public class AuthenticationAuditListener {
 
     private static String name(String candidate) {
         return (candidate == null || candidate.isBlank()) ? "anonymous" : candidate;
+    }
+
+    /**
+     * Deterministic, non-reversible actor label for failed attempts: {@code sha256:<first 16 hex>}.
+     * Truncated to keep the trail readable; a possibly-mistyped password never appears in cleartext.
+     */
+    private static String hashedActor(String candidate) {
+        if (candidate == null || candidate.isBlank()) {
+            return "anonymous";
+        }
+        try {
+            byte[] digest = MessageDigest.getInstance("SHA-256")
+                    .digest(candidate.getBytes(StandardCharsets.UTF_8));
+            return "sha256:" + HexFormat.of().formatHex(digest).substring(0, 16);
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 is a required JCA algorithm; if it is somehow absent, never fall back to cleartext.
+            return "sha256:unavailable";
+        }
     }
 }

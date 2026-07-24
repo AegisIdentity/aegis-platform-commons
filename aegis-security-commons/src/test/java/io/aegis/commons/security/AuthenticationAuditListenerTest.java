@@ -33,17 +33,32 @@ class AuthenticationAuditListenerTest {
     }
 
     @Test
-    void failure_event_records_failure_with_reason() {
-        var auth = UsernamePasswordAuthenticationToken.unauthenticated("mallory", "secret");
+    void failure_event_hashes_actor_and_records_reason() {
+        // The user typed their password into the username field (a common mistake).
+        var auth = UsernamePasswordAuthenticationToken.unauthenticated("hunter2-my-password", "secret");
         listener.onFailure(new AuthenticationFailureBadCredentialsEvent(auth,
                 new BadCredentialsException("bad")));
 
         assertThat(captured).hasSize(1);
         AuditEvent event = captured.get(0);
         assertThat(event.outcome()).isEqualTo(AuditOutcome.FAILURE);
-        assertThat(event.actor()).isEqualTo("mallory");
         assertThat(event.attributes()).containsEntry("reason", "BadCredentialsException");
-        // The failure record must NOT contain the attempted password.
+        // The attempted principal must be hashed, never stored in cleartext.
+        assertThat(event.actor()).startsWith("sha256:");
+        assertThat(event.actor()).doesNotContain("hunter2-my-password");
+        // No field (actor or attributes) may contain the attempted password.
+        assertThat(event.actor()).doesNotContain("secret");
         assertThat(event.attributes().values()).noneMatch(v -> v.contains("secret"));
+    }
+
+    @Test
+    void failure_actor_hash_is_deterministic_for_correlation() {
+        var a1 = UsernamePasswordAuthenticationToken.unauthenticated("mallory", "x");
+        var a2 = UsernamePasswordAuthenticationToken.unauthenticated("mallory", "y");
+        listener.onFailure(new AuthenticationFailureBadCredentialsEvent(a1, new BadCredentialsException("bad")));
+        listener.onFailure(new AuthenticationFailureBadCredentialsEvent(a2, new BadCredentialsException("bad")));
+
+        assertThat(captured).hasSize(2);
+        assertThat(captured.get(0).actor()).isEqualTo(captured.get(1).actor());
     }
 }

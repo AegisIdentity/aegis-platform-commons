@@ -29,18 +29,29 @@ public class TenantContextFilter extends OncePerRequestFilter {
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
         String header = request.getHeader(TenantHeaders.TENANT_ID);
+
+        // Validate the tenant header FIRST, in its own try/catch. If we let the parse happen inside the
+        // same try that wraps the filter chain, a downstream IllegalArgumentException (unrelated to the
+        // tenant) would be caught here and mislabeled as an "invalid tenant header".
+        TenantId tenantId = null;
+        if (header != null && !header.isBlank()) {
+            try {
+                tenantId = TenantId.of(header.trim());
+            } catch (IllegalArgumentException ex) {
+                // Malformed tenant header — reject rather than proceed tenant-less.
+                response.sendError(HttpServletResponse.SC_BAD_REQUEST, "invalid tenant header");
+                return;
+            }
+        }
+
         boolean bound = false;
         try {
-            if (header != null && !header.isBlank()) {
-                TenantId tenantId = TenantId.of(header.trim());
+            if (tenantId != null) {
                 TenantContext.set(tenantId);
                 MDC.put(MDC_TENANT, tenantId.value());
                 bound = true;
             }
             filterChain.doFilter(request, response);
-        } catch (IllegalArgumentException ex) {
-            // Malformed tenant header — reject rather than proceed tenant-less.
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "invalid tenant header");
         } finally {
             if (bound) {
                 TenantContext.clear();
