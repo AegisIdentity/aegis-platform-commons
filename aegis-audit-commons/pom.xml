@@ -40,5 +40,27 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!--
+          spring-kafka: the audit stream backbone. Present on the classpath so KafkaAuditEventPublisher
+          and KafkaTemplate resolve; the autoconfig only ACTIVATES the Kafka publisher when
+          spring.kafka.bootstrap-servers is set, so a service that doesn't configure Kafka never
+          touches a broker. Marked optional so downstream services can exclude it if they truly want
+          no Kafka classes at all.
+        -->
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+        <!--
+          Boot 4 keeps the Kafka AUTOCONFIGURATION (KafkaTemplate, producer/consumer factories,
+          listener container factory) in this separate module. spring-kafka alone is the library;
+          without spring-boot-kafka nothing wires it from spring.kafka.* properties, so KafkaTemplate
+          is absent and the publisher can't be built. Same split-module pattern as spring-boot-session
+          / spring-boot-flyway.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-kafka</artifactId>
+        </dependency>
     </dependencies>
 </project>
