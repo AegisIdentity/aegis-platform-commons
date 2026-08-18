@@ -86,4 +86,18 @@ public class AegisSecurityAutoConfiguration {
     public io.aegis.commons.audit.AuditRecorder auditRecorder(AuditEventPublisher publisher) {
         return new io.aegis.commons.audit.AuditRecorder(publisher);
     }
+
+    /**
+     * Publisher for business/integration domain events (the choreography backbone) — created only
+     * when Kafka is configured, and kept distinct from the audit publisher (different topics, fate,
+     * and contract; see {@link io.aegis.commons.events.DomainEventPublisher}).
+     */
+    @Bean
+    @ConditionalOnClass(KafkaTemplate.class)
+    @ConditionalOnProperty(name = "spring.kafka.bootstrap-servers")
+    @ConditionalOnMissingBean
+    public io.aegis.commons.events.DomainEventPublisher domainEventPublisher(
+            KafkaTemplate<String, String> kafkaTemplate) {
+        return new io.aegis.commons.events.DomainEventPublisher(kafkaTemplate);
+    }
 }
