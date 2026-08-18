@@ -79,4 +79,11 @@ public class AegisSecurityAutoConfiguration {
     public AuthenticationAuditListener authenticationAuditListener(AuditEventPublisher publisher) {
         return new AuthenticationAuditListener(publisher);
     }
+
+    /** One-call, never-throwing helper services use to emit domain events onto the audit trail. */
+    @Bean
+    @ConditionalOnMissingBean
+    public io.aegis.commons.audit.AuditRecorder auditRecorder(AuditEventPublisher publisher) {
+        return new io.aegis.commons.audit.AuditRecorder(publisher);
+    }
 }
