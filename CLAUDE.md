@@ -28,3 +28,15 @@ Two rules that are load-bearing rather than stylistic:
   exactly the case that matters (a new field that instructs the model).
 - **Unverified assertions confer nothing.** An A2A card with an unverified signature parses and is
   recorded, but `effectiveSkills()` returns empty. Record the claim, act on none of it.
+
+## Vault (added 2026-08-26)
+`aegis-vault-commons` — ADR-0015/0016. Two rules:
+- **`TenantVaultPaths` has no overload taking a tenant argument, and must never gain one.** The
+  tenant segment is derived from `TenantContext`, exactly like `X-Aegis-Tenant` at the edge. A
+  tenant-supplied path string must never reach Vault.
+- **Transit keys are created with `exportable=false`.** A key that can be exported defeats the
+  reason for using Transit at all, so it is not a caller-tunable option.
+
+Built on a narrow `VaultClient` SPI, not a Vault SDK — keeps these tests container-free, keeps the
+dependency/CVE surface small on a component that now sits on the token path, and makes the path
+templating testable in isolation.

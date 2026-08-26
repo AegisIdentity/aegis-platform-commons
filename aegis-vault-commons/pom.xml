@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.aegis</groupId>
+        <artifactId>aegis-platform-parent</artifactId>
+        <version>0.1.0</version>
+        <relativePath>../../aegis-platform-bom/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aegis-vault-commons</artifactId>
+    <version>0.1.0</version>
+    <name>Aegis Vault Commons</name>
+    <description>Per-tenant HashiCorp Vault access: transit (key generation, signing, rotation —
+        private keys never leave Vault), KV v2 secrets, and PKI. Tenant path segments are always
+        derived server-side from TenantContext and never accepted from a caller (ADR-0015/0016).
+
+        Deliberately built on a narrow VaultClient SPI rather than a Vault SDK: the HTTP surface we
+        use is small, the seam keeps these unit tests container-free per this repo's testing rule,
+        and it keeps the security-critical path templating testable in isolation.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.aegis</groupId>
+            <artifactId>aegis-tenant-context</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.aegis</groupId>
+            <artifactId>aegis-audit-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>

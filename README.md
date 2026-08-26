@@ -8,6 +8,7 @@ Shared libraries consumed by every Aegis service (multi-module):
 | `aegis-web-commons` | correlation-id filter, safe RFC-7807 (ProblemDetail) error model |
 | `aegis-audit-commons` | audit event model + publisher SPI + structured-logging publisher |
 | `aegis-agent-commons` | protocol-agnostic AI-agent identity: agent principals with a mandatory owner edge, content-addressed tool identity, bounded mandates; MCP / A2A / AP2 adapters |
+| `aegis-vault-commons` | per-tenant HashiCorp Vault: transit (key gen/sign/rotate — private keys never leave Vault), KV v2 secrets, PKI; tenant path segment always derived from `TenantContext` |
 | `aegis-security-commons` | hardening headers/CSP, stateless-bearer-API defaults, CORS, auth-event→audit bridge, auto-config |
 | `aegis-testing-support` | Testcontainers `@ServiceConnection` config + `jwt()` MockMvc helpers |
 
