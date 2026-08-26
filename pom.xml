@@ -21,6 +21,7 @@
         <module>aegis-tenant-context</module>
         <module>aegis-web-commons</module>
         <module>aegis-audit-commons</module>
+        <module>aegis-agent-commons</module>
         <module>aegis-security-commons</module>
         <module>aegis-testing-support</module>
     </modules>

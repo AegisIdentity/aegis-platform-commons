@@ -16,3 +16,15 @@ the point of `aegis-security-commons`; a shared DB would break tenant isolation 
 ## Build / test
 `mvn install`. Tests are fast unit tests (no containers). Keep them that way — integration coverage
 lives in the services.
+
+## Agent identity (added 2026-08-26)
+`aegis-agent-commons` is **protocol-agnostic on purpose** (ADR-0011). MCP / A2A / AP2 field names
+appear only under `io.aegis.commons.agent.protocol`. If a protocol type leaks into the core model,
+the next protocol revision becomes a platform-wide change instead of an adapter change.
+
+Two rules that are load-bearing rather than stylistic:
+- **Unknown fields fail closed.** `McpToolAdapter` uses a deny-list of cosmetic fields, so an
+  unrecognized field counts as semantic and forces re-consent. An allow-list would fail open on
+  exactly the case that matters (a new field that instructs the model).
+- **Unverified assertions confer nothing.** An A2A card with an unverified signature parses and is
+  recorded, but `effectiveSkills()` returns empty. Record the claim, act on none of it.

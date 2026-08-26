@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>io.aegis</groupId>
+        <artifactId>aegis-platform-parent</artifactId>
+        <version>0.1.0</version>
+        <relativePath>../../aegis-platform-bom/pom.xml</relativePath>
+    </parent>
+
+    <artifactId>aegis-agent-commons</artifactId>
+    <version>0.1.0</version>
+    <name>Aegis Agent Commons</name>
+    <description>Protocol-agnostic AI-agent identity primitives: agent principals with a mandatory
+        owner edge, content-addressed tool identity, and bounded mandates. Per ADR-0011 the core
+        model names no protocol and no vendor SDK; MCP / A2A / AP2 live in thin adapters so protocol
+        churn never reaches the platform.</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>io.aegis</groupId>
+            <artifactId>aegis-tenant-context</artifactId>
+        </dependency>
+        <!--
+          audit-commons supplies DelegationHop / DelegationChain / PrincipalType (ADR-0010). The
+          dependency points this way, not the reverse: the chain's first duty is the forensic record,
+          and every agent code path emits audit events anyway. Inverting it would make the audit
+          library depend on the agent library, which is the wrong way round for a leaf concern.
+        -->
+        <dependency>
+            <groupId>io.aegis</groupId>
+            <artifactId>aegis-audit-commons</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
