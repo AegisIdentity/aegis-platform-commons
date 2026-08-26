@@ -3,8 +3,11 @@ package io.aegis.commons.vault;
 import io.aegis.commons.audit.AuditEvent;
 import io.aegis.commons.audit.AuditEventPublisher;
 import io.aegis.commons.audit.AuditOutcome;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -92,6 +95,86 @@ public class VaultTransit {
         record("transit.decrypt", keyName);
         return Base64.getDecoder().decode(string(response, "plaintext")
                 .orElseThrow(() -> new VaultException("transit decrypt returned no plaintext for key " + keyName)));
+    }
+
+    /**
+     * Sign for a JWS, returning the <b>raw</b> signature bytes.
+     *
+     * <p>Two details here are load-bearing and easy to get wrong.
+     *
+     * <p>First, the algorithm. A JWS header of {@code RS256} promises RSASSA-PKCS1-v1_5 over SHA-256.
+     * Vault's transit engine defaults RSA signing to <b>PSS</b>, so omitting these parameters
+     * produces a signature that no JWT verifier accepts — and the failure surfaces as "invalid token"
+     * across every resource server rather than as an error here, which is a miserable thing to debug.
+     *
+     * <p>Second, the encoding. Vault returns {@code vault:v<n>:<base64>}; a JWS needs the raw bytes.
+     * Leaving the prefix attached yields a token that looks perfectly well-formed and never verifies.
+     */
+    public byte[] signJws(String keyName, byte[] signingInput) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("input", Base64.getEncoder().encodeToString(signingInput));
+        body.put("signature_algorithm", "pkcs1v15");
+        body.put("hash_algorithm", "sha2-256");
+        body.put("prehashed", false);
+
+        Map<String, Object> response = client.write(paths.transitSign(keyName), body, paths.namespace());
+        record("transit.sign", keyName);
+
+        String signature = string(response, "signature")
+                .orElseThrow(() -> new VaultException("transit sign returned no signature for key " + keyName));
+        return decodeVaultSignature(signature, keyName);
+    }
+
+    /**
+     * Strip Vault's {@code vault:v<n>:} envelope and decode the payload.
+     *
+     * @throws VaultException if the envelope is absent — better to fail at signing time than to emit
+     *                        a token that silently never verifies.
+     */
+    private static byte[] decodeVaultSignature(String signature, String keyName) {
+        int lastColon = signature.lastIndexOf(':');
+        if (!signature.startsWith("vault:") || lastColon < 0) {
+            throw new VaultException("unexpected transit signature format for key " + keyName);
+        }
+        return Base64.getDecoder().decode(signature.substring(lastColon + 1));
+    }
+
+    /** The latest public key version. */
+    public VaultPublicKey publicKey(String keyName) {
+        List<VaultPublicKey> versions = publicKeyVersions(keyName);
+        if (versions.isEmpty()) {
+            throw new VaultException("no public key for transit key " + keyName);
+        }
+        return versions.get(versions.size() - 1);
+    }
+
+    /**
+     * Every public key version, oldest first.
+     *
+     * <p>All versions matter, not just the newest: overlapping-{@code kid} rotation (ADR-0007) means
+     * a token signed by version 1 must still verify after the key rotates to version 2, so JWKS has
+     * to publish both until the older tokens have expired.
+     */
+    public List<VaultPublicKey> publicKeyVersions(String keyName) {
+        Map<String, Object> data = data(client.read(paths.transitKey(keyName), paths.namespace()));
+        Object keys = data.get("keys");
+        if (!(keys instanceof Map<?, ?> keyMap)) {
+            return List.of();
+        }
+
+        List<VaultPublicKey> versions = new ArrayList<>();
+        keyMap.forEach((version, detail) -> {
+            if (detail instanceof Map<?, ?> fields && fields.get("public_key") instanceof String pem) {
+                try {
+                    versions.add(new VaultPublicKey(Integer.parseInt(String.valueOf(version)), pem));
+                } catch (NumberFormatException ignored) {
+                    // A non-numeric version key is not something Vault produces; skip rather than
+                    // fail the whole read and lose the versions we can use.
+                }
+            }
+        });
+        versions.sort(Comparator.comparingInt(VaultPublicKey::version));
+        return List.copyOf(versions);
     }
 
     /**

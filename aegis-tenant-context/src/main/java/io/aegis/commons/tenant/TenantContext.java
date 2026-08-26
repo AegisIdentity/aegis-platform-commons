@@ -53,6 +53,27 @@ public final class TenantContext {
      * Run an action with the given tenant bound, restoring the previous binding afterwards.
      * Prefer this over manual set/clear when nesting is possible.
      */
+    /**
+     * Like {@link #runAs} but returns a value.
+     *
+     * <p>Exists so callers that need a result are not tempted to hand-roll set/call/clear, which is
+     * how a binding leaks onto a pooled thread when the action throws — and a leaked binding is a
+     * cross-tenant read.
+     */
+    public static <T> T callAs(TenantId tenantId, java.util.function.Supplier<T> action) {
+        TenantId previous = CURRENT.get();
+        try {
+            set(tenantId);
+            return action.get();
+        } finally {
+            if (previous != null) {
+                CURRENT.set(previous);
+            } else {
+                CURRENT.remove();
+            }
+        }
+    }
+
     public static void runAs(TenantId tenantId, Runnable action) {
         TenantId previous = CURRENT.get();
         try {

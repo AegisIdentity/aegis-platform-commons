@@ -56,4 +56,34 @@ class TenantContextTest {
         TenantContext.runAs(TenantId.of("inner"), () -> { /* work */ });
         assertThat(TenantContext.current()).isEmpty();
     }
+
+    @Test
+    void callAs_returns_a_value_and_restores_the_previous_tenant() {
+        TenantContext.set(TenantId.of("outer"));
+
+        String seen = TenantContext.callAs(TenantId.of("inner"),
+                () -> TenantContext.currentOrThrow().value());
+
+        assertThat(seen).isEqualTo("inner");
+        assertThat(TenantContext.currentOrThrow().value()).isEqualTo("outer");
+    }
+
+    @Test
+    void callAs_clears_the_binding_when_there_was_none_before() {
+        TenantContext.callAs(TenantId.of("inner"), () -> "x");
+        assertThat(TenantContext.isSet()).isFalse();
+    }
+
+    @Test
+    void callAs_restores_the_previous_tenant_even_when_the_action_throws() {
+        // A leaked binding on a pooled thread is a cross-tenant leak, so the restore has to survive
+        // an exception — which is exactly the case a naive set/call/clear at a call site misses.
+        TenantContext.set(TenantId.of("outer"));
+
+        assertThatThrownBy(() -> TenantContext.callAs(TenantId.of("inner"), () -> {
+            throw new IllegalStateException("boom");
+        })).isInstanceOf(IllegalStateException.class);
+
+        assertThat(TenantContext.currentOrThrow().value()).isEqualTo("outer");
+    }
 }

@@ -33,7 +33,7 @@ class VaultSecretsTest {
 
     @Test
     void unwraps_the_kv_v2_double_data_envelope_on_read() {
-        client.respondTo("aegis/acme/kv/data/datasource",
+        client.respondTo("aegis/kv/data/acme/datasource",
                 Map.of("data", Map.of("data", Map.of("password", "s3cret", "username", "app"))));
 
         assertThat(secrets.get("datasource", "password")).contains("s3cret");
@@ -47,7 +47,7 @@ class VaultSecretsTest {
         secrets.put("datasource", Map.of("password", "s3cret"));
 
         FakeVaultClient.Call call = client.lastCall();
-        assertThat(call.path()).isEqualTo("aegis/acme/kv/data/datasource");
+        assertThat(call.path()).isEqualTo("aegis/kv/data/acme/datasource");
         assertThat(call.body()).containsKey("data");
         assertThat(call.body().get("data")).isEqualTo(Map.of("password", "s3cret"));
     }
@@ -59,7 +59,7 @@ class VaultSecretsTest {
 
     @Test
     void a_missing_key_within_an_existing_secret_is_empty() {
-        client.respondTo("aegis/acme/kv/data/datasource",
+        client.respondTo("aegis/kv/data/acme/datasource",
                 Map.of("data", Map.of("data", Map.of("username", "app"))));
         assertThat(secrets.get("datasource", "password")).isEmpty();
     }
@@ -68,6 +68,6 @@ class VaultSecretsTest {
     void delete_targets_the_tenant_scoped_path() {
         secrets.delete("datasource");
         assertThat(client.lastCall().verb()).isEqualTo("DELETE");
-        assertThat(client.lastCall().path()).isEqualTo("aegis/acme/kv/data/datasource");
+        assertThat(client.lastCall().path()).isEqualTo("aegis/kv/data/acme/datasource");
     }
 }

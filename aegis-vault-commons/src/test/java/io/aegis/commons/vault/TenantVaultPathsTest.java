@@ -29,12 +29,31 @@ class TenantVaultPathsTest {
     }
 
     @Test
-    void templates_the_tenant_segment_from_tenant_context() {
+    void scopes_transit_by_KEY_NAME_prefix_and_kv_by_PATH_segment() {
+        // The two engines are scoped differently, and it is not arbitrary.
+        //
+        // A transit key name is a URL path segment and cannot contain "/", so the tenant has to be a
+        // NAME PREFIX inside one shared mount. The obvious-looking alternative — a transit mount per
+        // tenant — is a scaling dead end: Vault caps mounts at ~14,000 on Integrated Storage and
+        // every additional mount lengthens leadership transfer, so a per-tenant mount puts a hard
+        // ceiling on tenant count and degrades failover long before reaching it.
+        //
+        // KV v2 genuinely supports nested paths, so there the tenant is a path segment.
         TenantContext.set(TenantId.of("acme"));
-        assertThat(paths.transitKey("token-signing")).isEqualTo("aegis/acme/transit/keys/token-signing");
-        assertThat(paths.transitSign("token-signing")).isEqualTo("aegis/acme/transit/sign/token-signing");
-        assertThat(paths.kv("datasource/password")).isEqualTo("aegis/acme/kv/data/datasource/password");
-        assertThat(paths.pkiIssue("workload")).isEqualTo("aegis/acme/pki/issue/workload");
+
+        assertThat(paths.transitKey("token-signing")).isEqualTo("aegis/transit/keys/acme-token-signing");
+        assertThat(paths.transitSign("token-signing")).isEqualTo("aegis/transit/sign/acme-token-signing");
+        assertThat(paths.kv("datasource/password")).isEqualTo("aegis/kv/data/acme/datasource/password");
+        assertThat(paths.pkiIssue("workload")).isEqualTo("aegis/pki/issue/acme-workload");
+    }
+
+    @Test
+    void one_shared_mount_per_engine_so_tenant_count_is_not_capped_by_vault_mount_limits() {
+        TenantContext.set(TenantId.of("acme"));
+        // No tenant appears before the engine name — that is what keeps this a single mount.
+        assertThat(paths.transitKey("k")).startsWith("aegis/transit/");
+        assertThat(paths.kv("k")).startsWith("aegis/kv/");
+        assertThat(paths.pkiIssue("k")).startsWith("aegis/pki/");
     }
 
     @Test
@@ -46,6 +65,8 @@ class TenantVaultPathsTest {
 
         assertThat(acme).isNotEqualTo(globex);
         assertThat(globex).doesNotContain("acme");
+        assertThat(acme).isEqualTo("aegis/transit/keys/acme-k");
+        assertThat(globex).isEqualTo("aegis/transit/keys/globex-k");
     }
 
     @Test
@@ -77,14 +98,16 @@ class TenantVaultPathsTest {
     }
 
     @Test
-    void allows_legitimate_hierarchical_names() {
-        // Tenant-managed keys live under a sub-path, so '/' must remain legal — the check has to
-        // reject traversal without rejecting hierarchy.
+    void allows_hierarchical_KV_paths_but_not_hierarchical_transit_key_names() {
+        // KV nests; transit does not, because a transit key name is a single URL path segment.
+        // Accepting a "/" in a transit key name would silently produce a path Vault routes
+        // somewhere else entirely.
         TenantContext.set(TenantId.of("acme"));
-        assertThat(paths.transitKey("tenant-managed/my-key"))
-                .isEqualTo("aegis/acme/transit/keys/tenant-managed/my-key");
+        assertThatThrownBy(() -> paths.transitKey("tenant-managed/my-key"))
+                .isInstanceOf(IllegalArgumentException.class);
         assertThat(paths.kv("app/prod/db.password"))
-                .isEqualTo("aegis/acme/kv/data/app/prod/db.password");
+                .isEqualTo("aegis/acme/kv/data/app/prod/db.password".replace("acme/kv", "kv")
+                        .replace("aegis/kv/data/", "aegis/kv/data/acme/"));
     }
 
     @Test
@@ -99,13 +122,15 @@ class TenantVaultPathsTest {
     // --- isolation modes ------------------------------------------------------------------------
 
     @Test
-    void namespace_isolation_omits_the_tenant_from_the_path_and_names_it_separately() {
-        // Vault Enterprise puts the tenant in a namespace header instead of the path. Application
-        // code must be identical either way (ADR-0015), so only these two methods differ.
+    void namespace_isolation_drops_the_tenant_prefix_because_the_namespace_already_carries_it() {
+        // Vault Enterprise puts the tenant in a namespace header. Keeping the name prefix as well
+        // would produce acme-token-signing INSIDE namespace acme/ — correct but confusing, and it
+        // would make the two isolation modes produce different key names for the same logical key.
         TenantVaultPaths ns = new TenantVaultPaths("aegis", VaultIsolation.NAMESPACE);
         TenantContext.set(TenantId.of("acme"));
 
         assertThat(ns.transitKey("token-signing")).isEqualTo("aegis/transit/keys/token-signing");
+        assertThat(ns.kv("datasource")).isEqualTo("aegis/kv/data/datasource");
         assertThat(ns.namespace()).isEqualTo("acme");
     }
 
