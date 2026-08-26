@@ -28,6 +28,10 @@ Two rules that are load-bearing rather than stylistic:
   exactly the case that matters (a new field that instructs the model).
 - **Unverified assertions confer nothing.** An A2A card with an unverified signature parses and is
   recorded, but `effectiveSkills()` returns empty. Record the claim, act on none of it.
+- **A2A signatures are really verified** (`A2aCardVerifier`), not asserted by the caller. The signed
+  payload is the card *minus* its `signatures` field, canonicalized — so signer and verifier must
+  canonicalize identically or a valid signature reads as tampering. That interop hazard is inherent
+  to embedding signatures in the signed document; start there if a partner's cards fail.
 
 ## Vault (added 2026-08-26)
 `aegis-vault-commons` — ADR-0015/0016. Two rules:

@@ -42,6 +42,15 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
         </dependency>
+        <!--
+          JOSE/JWS. Needed to VERIFY A2A Agent Card signatures: the protocol leaves card verification
+          to implementers, so without real signature checking an "agent card" is just a claim.
+          Version is managed by the Spring Boot parent.
+        -->
+        <dependency>
+            <groupId>com.nimbusds</groupId>
+            <artifactId>nimbus-jose-jwt</artifactId>
+        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
