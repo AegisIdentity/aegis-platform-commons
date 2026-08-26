@@ -22,6 +22,14 @@ import org.slf4j.MDC;
  * @param correlationId request correlation id, for cross-service stitching (may be null)
  * @param at          event time
  * @param attributes  extra non-sensitive context
+ * @param onBehalfOf  the <em>root</em> principal whose authority is being exercised — the
+ *                    accountable human or service at the head of {@code delegationChain}. Null for
+ *                    ordinary, non-delegated events.
+ * @param delegationChain who authorized whom, root-first (ADR-0010). Never null — empty when the
+ *                    event has no delegation, so callers need no null check.
+ * @param agentInstanceId identifier for one <em>run</em> of an agent, distinguishing a single
+ *                    execution from the agent definition. Null for non-agent events.
+ * @param toolInvocationId correlates the request, result and any error of one tool call.
  */
 public record AuditEvent(
         String type,
@@ -32,7 +40,14 @@ public record AuditEvent(
         String target,
         String correlationId,
         Instant at,
-        Map<String, String> attributes) {
+        Map<String, String> attributes,
+        // --- added 2026-08-26 (ADR-0010). ADDITIVE ONLY: the nine fields above keep their exact
+        // names and meanings because this record is serialized to customer SIEMs. In particular
+        // `actor` still means "the effective (last-hop) actor" — do not redefine it. ---
+        String onBehalfOf,
+        DelegationChain delegationChain,
+        String agentInstanceId,
+        String toolInvocationId) {
 
     public AuditEvent {
         if (type == null || type.isBlank()) {
@@ -48,6 +63,28 @@ public record AuditEvent(
             throw new IllegalArgumentException("audit event time is required");
         }
         attributes = attributes == null ? Map.of() : Map.copyOf(attributes);
+        delegationChain = delegationChain == null ? DelegationChain.empty() : delegationChain;
+    }
+
+    /**
+     * Nine-argument constructor preserved for source compatibility.
+     *
+     * <p>Downstream repos construct {@code AuditEvent} directly. Adding record components would
+     * otherwise be a source-breaking change across the polyrepo, which ADR-0010 forbids — so this
+     * overload stays. Do not remove it.
+     */
+    public AuditEvent(
+            String type,
+            String action,
+            AuditOutcome outcome,
+            String tenantId,
+            String actor,
+            String target,
+            String correlationId,
+            Instant at,
+            Map<String, String> attributes) {
+        this(type, action, outcome, tenantId, actor, target, correlationId, at, attributes,
+                null, DelegationChain.empty(), null, null);
     }
 
     /** Start a builder that auto-fills tenant (from {@link TenantContext}), correlation id, and time. */
@@ -65,6 +102,12 @@ public record AuditEvent(
         private String correlationId = MDC.get("correlationId");
         private Instant at = Instant.now();
         private final java.util.Map<String, String> attributes = new java.util.LinkedHashMap<>();
+        private String onBehalfOf;
+        private DelegationChain delegationChain = DelegationChain.empty();
+        private String agentInstanceId;
+        private String toolInvocationId;
+        /** Tracks whether the caller named an actor explicitly, so {@link #delegation} never overrides one. */
+        private boolean actorExplicit;
 
         private Builder(String type, String action, AuditOutcome outcome) {
             this.type = type;
@@ -79,6 +122,7 @@ public record AuditEvent(
 
         public Builder actor(String actor) {
             this.actor = actor;
+            this.actorExplicit = true;
             return this;
         }
 
@@ -99,9 +143,46 @@ public record AuditEvent(
             return this;
         }
 
+        /**
+         * Attach a delegation chain, deriving the two fields that must agree with it:
+         * {@code actor} becomes the effective (last) hop and {@code onBehalfOf} becomes the root
+         * hop. Deriving rather than requiring both to be passed is what keeps the forensic record
+         * and the authorization decision from drifting apart (ADR-0010).
+         *
+         * <p>An actor named explicitly via {@link #actor(String)} always wins, whichever order the
+         * two calls are made in.
+         */
+        public Builder delegation(DelegationChain chain) {
+            this.delegationChain = chain == null ? DelegationChain.empty() : chain;
+            this.delegationChain.root()
+                    .ifPresent(root -> this.onBehalfOf = root.principal());
+            if (!actorExplicit) {
+                this.delegationChain.effective()
+                        .ifPresent(effective -> this.actor = effective.principal());
+            }
+            return this;
+        }
+
+        /** Override the derived root principal. Rarely needed — prefer {@link #delegation}. */
+        public Builder onBehalfOf(String onBehalfOf) {
+            this.onBehalfOf = onBehalfOf;
+            return this;
+        }
+
+        public Builder agentInstanceId(String agentInstanceId) {
+            this.agentInstanceId = agentInstanceId;
+            return this;
+        }
+
+        public Builder toolInvocationId(String toolInvocationId) {
+            this.toolInvocationId = toolInvocationId;
+            return this;
+        }
+
         public AuditEvent build() {
             return new AuditEvent(type, action, outcome, tenantId, actor, target,
-                    correlationId, at, attributes);
+                    correlationId, at, attributes,
+                    onBehalfOf, delegationChain, agentInstanceId, toolInvocationId);
         }
     }
 }
