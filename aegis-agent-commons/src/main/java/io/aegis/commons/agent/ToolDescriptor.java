@@ -63,6 +63,21 @@ public record ToolDescriptor(
         return CanonicalJson.sha256Hex(canonical.toString());
     }
 
+    /**
+     * SHA-256 over the <em>cosmetic</em> fields.
+     *
+     * <p>{@link #definitionHash()} deliberately ignores these, which means it cannot tell a retitled
+     * tool from an unchanged one. Anything that needs to detect display-only drift needs this
+     * separate fingerprint — it lives here beside its counterpart rather than being re-derived,
+     * inconsistently, by each caller.
+     */
+    public String cosmeticHash() {
+        StringBuilder canonical = new StringBuilder();
+        new TreeMap<>(cosmetic)   // TreeMap: map iteration order must not change the hash
+                .forEach((k, v) -> canonical.append(k).append('=').append(v).append('\n'));
+        return CanonicalJson.sha256Hex(canonical.toString());
+    }
+
     public ToolIdentity identity() {
         return new ToolIdentity(serverId, toolName, definitionHash());
     }

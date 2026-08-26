@@ -84,6 +84,36 @@ class ToolIdentityTest {
         assertThat(a.identity()).isNotEqualTo(b.identity());
     }
 
+    // --- cosmetic fingerprint ---------------------------------------------------------------------
+
+    @Test
+    void cosmetic_hash_changes_when_a_display_field_changes() {
+        // definitionHash deliberately ignores cosmetic fields, which means it CANNOT distinguish a
+        // retitled tool from an unchanged one. Anything that needs to detect cosmetic drift — the
+        // registry, for instance — needs a separate fingerprint, so it lives here next to its
+        // counterpart rather than being re-derived by each caller.
+        assertThat(tool("Read a file", SCHEMA, Map.of("title", "Read")).cosmeticHash())
+                .isNotEqualTo(tool("Read a file", SCHEMA, Map.of("title", "Open")).cosmeticHash());
+    }
+
+    @Test
+    void cosmetic_hash_is_unchanged_when_only_semantic_fields_change() {
+        assertThat(tool("Read a file", SCHEMA, Map.of("title", "Read")).cosmeticHash())
+                .isEqualTo(tool("Totally different", SCHEMA, Map.of("title", "Read")).cosmeticHash());
+    }
+
+    @Test
+    void cosmetic_hash_is_stable_across_map_iteration_order() {
+        assertThat(tool("d", SCHEMA, Map.of("title", "Read", "icon", "a")).cosmeticHash())
+                .isEqualTo(tool("d", SCHEMA, Map.of("icon", "a", "title", "Read")).cosmeticHash());
+    }
+
+    @Test
+    void a_tool_with_no_cosmetic_fields_still_has_a_stable_hash() {
+        assertThat(tool("d", SCHEMA, Map.of()).cosmeticHash())
+                .isEqualTo(tool("d", SCHEMA, Map.of()).cosmeticHash());
+    }
+
     // --- identity URI ---------------------------------------------------------------------------
 
     @Test
